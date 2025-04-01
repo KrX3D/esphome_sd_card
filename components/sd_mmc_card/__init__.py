@@ -16,6 +16,7 @@ from esphome.components.esp32 import get_esp32_variant
 from esphome.components.esp32.const import (
     VARIANT_ESP32,
     VARIANT_ESP32S3,
+    VARIANT_ESP32C6,
 )
 
 DEPENDENCIES = ["esp32"]
