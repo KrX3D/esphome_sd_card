@@ -97,7 +97,7 @@ def _final_validate(_):
     if not CORE.is_esp32:
         return
     variant = get_esp32_variant()
-    if variant not in [VARIANT_ESP32, VARIANT_ESP32S3]:
+    if variant not in [VARIANT_ESP32, VARIANT_ESP32S3, VARIANT_ESP32C6]:
         raise cv.Invalid(f"Unsupported variant {variant}")
 
 
