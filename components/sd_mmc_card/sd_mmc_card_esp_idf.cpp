@@ -201,7 +201,7 @@ std::vector<FileInfo> &SdMmc::list_directory_file_info_rec(const char *path, uin
     }
     list.emplace_back(entry_path, file_size, entry->d_type == DT_DIR);
     if (entry->d_type == DT_DIR && depth)
-      list_directory_file_info_rec(entry_absolut_path, depth - 1, list);
+      list_directory_file_info_rec(entry_path, depth - 1, list);
   }
   closedir(dir);
   return list;
