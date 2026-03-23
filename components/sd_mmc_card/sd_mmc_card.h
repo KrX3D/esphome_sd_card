@@ -66,6 +66,7 @@ class SdMmc : public Component {
   bool delete_file(std::string const &path);
   bool create_directory(const char *path);
   bool remove_directory(const char *path);
+  bool format_card();
   std::vector<uint8_t> read_file(char const *path);
   std::vector<uint8_t> read_file(std::string const &path);
   bool is_directory(const char *path);
@@ -189,6 +190,16 @@ template<typename... Ts> class SdMmcDeleteFileAction : public Action<Ts...> {
     auto path = this->path_.value(x...);
     this->parent_->delete_file(path.c_str());
   }
+
+ protected:
+  SdMmc *parent_;
+};
+
+template<typename... Ts> class SdMmcFormatAction : public Action<Ts...> {
+ public:
+  SdMmcFormatAction(SdMmc *parent) : parent_(parent) {}
+
+  void play(const Ts &...x) override { this->parent_->format_card(); }
 
  protected:
   SdMmc *parent_;

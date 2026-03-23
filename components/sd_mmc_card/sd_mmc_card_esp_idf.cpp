@@ -168,7 +168,9 @@ std::vector<FileInfo> &SdMmc::list_directory_file_info_rec(const char *path, uin
   std::string absolut_path = build_path(path);
   DIR *dir = opendir(absolut_path.c_str());
   if (!dir) {
-    ESP_LOGE(TAG, "Failed to open directory: %s", strerror(errno));
+    // FIX: downgraded from LOGE to LOGD — this fires harmlessly on the first
+    // attempt with an empty path before the component retries with "/".
+    ESP_LOGD(TAG, "Failed to open directory: %s", strerror(errno));
     return list;
   }
   char entry_absolut_path[FILE_PATH_MAX];
@@ -217,10 +219,22 @@ size_t SdMmc::file_size(const char *path) {
   if (stat(absolut_path.c_str(), &info) < 0) {
     // FIX: original returned (size_t)-1 which wraps to ~4 GB on 32-bit size_t.
     // Return 0 so sensors show 0 B for missing files instead of 4294967296 B.
-    ESP_LOGE(TAG, "Failed to stat file: %s", strerror(errno));
+    ESP_LOGD(TAG, "File not found (stat): %s", path);
     return 0;
   }
   return info.st_size;
+}
+
+bool SdMmc::format_card() {
+  ESP_LOGW(TAG, "Formatting SD card...");
+  esp_err_t err = esp_vfs_fat_sdcard_format(MOUNT_POINT.c_str(), this->card_);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Format failed: %s", esp_err_to_name(err));
+    return false;
+  }
+  ESP_LOGI(TAG, "Format complete");
+  this->update_sensors();
+  return true;
 }
 
 std::string SdMmc::sd_card_type() const {
