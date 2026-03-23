@@ -168,9 +168,13 @@ std::vector<FileInfo> &SdMmc::list_directory_file_info_rec(const char *path, uin
   std::string absolut_path = build_path(path);
   DIR *dir = opendir(absolut_path.c_str());
   if (!dir) {
-    // FIX: downgraded from LOGE to LOGD — this fires harmlessly on the first
-    // attempt with an empty path before the component retries with "/".
-    ESP_LOGD(TAG, "Failed to open directory: %s", strerror(errno));
+    if (errno == ENOENT) {
+      // Path does not exist — warn, not error (e.g. empty-path retry before "/")
+      ESP_LOGW(TAG, "Directory not found: %s", path);
+    } else {
+      // Something genuinely wrong (permission denied, I/O error, etc.)
+      ESP_LOGE(TAG, "Failed to open directory %s: %s", path, strerror(errno));
+    }
     return list;
   }
   char entry_absolut_path[FILE_PATH_MAX];
@@ -215,18 +219,24 @@ bool SdMmc::is_directory(const char *path) {
 size_t SdMmc::file_size(const char *path) {
   std::string absolut_path = build_path(path);
   struct stat info;
-  size_t file_size = 0;
   if (stat(absolut_path.c_str(), &info) < 0) {
+    if (errno == ENOENT) {
+      // File does not exist — this is expected (e.g. sensor polling before
+      // first write). Warn so the user can see the state, but it is not an error.
+      ESP_LOGW(TAG, "File not found: %s", path);
+    } else {
+      // Genuine I/O or permission problem
+      ESP_LOGE(TAG, "Failed to stat %s: %s", path, strerror(errno));
+    }
     // FIX: original returned (size_t)-1 which wraps to ~4 GB on 32-bit size_t.
     // Return 0 so sensors show 0 B for missing files instead of 4294967296 B.
-    ESP_LOGD(TAG, "File not found (stat): %s", path);
     return 0;
   }
   return info.st_size;
 }
 
 bool SdMmc::format_card() {
-  ESP_LOGW(TAG, "Formatting SD card...");
+  ESP_LOGW(TAG, "Formatting SD card at %s...", MOUNT_POINT.c_str());
   esp_err_t err = esp_vfs_fat_sdcard_format(MOUNT_POINT.c_str(), this->card_);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Format failed: %s", esp_err_to_name(err));
