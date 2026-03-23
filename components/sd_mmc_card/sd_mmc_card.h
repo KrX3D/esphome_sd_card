@@ -42,9 +42,13 @@ class SdMmc : public Component {
   SUB_SENSOR(used_space)
   SUB_SENSOR(total_space)
   SUB_SENSOR(free_space)
+  // NEW: SD/MMC bus frequency in kHz (ESP-IDF only; Arduino does not expose this)
+  SUB_SENSOR(frequency)
 #endif
 #ifdef USE_TEXT_SENSOR
   SUB_TEXT_SENSOR(sd_card_type)
+  // NEW: filesystem type string (FAT12 / FAT16 / FAT32 / exFAT — ESP-IDF only)
+  SUB_TEXT_SENSOR(fs_type)
 #endif
  public:
   enum ErrorCode {
@@ -110,6 +114,7 @@ class SdMmc : public Component {
 #endif
 #ifdef USE_ESP_IDF
   std::string sd_card_type() const;
+  std::string fs_type() const;
 #endif
   std::vector<FileInfo> &list_directory_file_info_rec(const char *path, uint8_t depth, std::vector<FileInfo> &list);
   static std::string error_code_to_string(ErrorCode);

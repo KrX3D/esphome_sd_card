@@ -8,6 +8,7 @@
 #include "sdmmc_cmd.h"
 #include "driver/sdmmc_host.h"
 #include "driver/sdmmc_types.h"
+#include "ff.h"
 
 int constexpr SD_OCR_SDHC_CAP = (1 << 30);  // value defined in esp-idf/components/sdmmc/include/sd_protocol_defs.h
 
@@ -68,6 +69,8 @@ void SdMmc::setup() {
 #ifdef USE_TEXT_SENSOR
   if (this->sd_card_type_text_sensor_ != nullptr)
     this->sd_card_type_text_sensor_->publish_state(sd_card_type());
+  if (this->fs_type_text_sensor_ != nullptr)
+    this->fs_type_text_sensor_->publish_state(fs_type());
 #endif
 
   update_sensors();
@@ -93,6 +96,11 @@ bool SdMmc::create_directory(const char *path) {
   ESP_LOGV(TAG, "Create directory: %s", path);
   std::string absolut_path = build_path(path);
   if (mkdir(absolut_path.c_str(), 0777) < 0) {
+    if (errno == EEXIST) {
+      // Directory already exists — not an error
+      ESP_LOGI(TAG, "Directory already exists: %s", path);
+      return true;
+    }
     ESP_LOGE(TAG, "Failed to create a new directory: %s", strerror(errno));
     return false;
   }
@@ -109,6 +117,7 @@ bool SdMmc::remove_directory(const char *path) {
   std::string absolut_path = build_path(path);
   if (remove(absolut_path.c_str()) != 0) {
     ESP_LOGE(TAG, "Failed to remove directory: %s", strerror(errno));
+    return false;
   }
   this->update_sensors();
   return true;
@@ -123,6 +132,7 @@ bool SdMmc::delete_file(const char *path) {
   std::string absolut_path = build_path(path);
   if (remove(absolut_path.c_str()) != 0) {
     ESP_LOGE(TAG, "Failed to remove file: %s", strerror(errno));
+    return false;
   }
   this->update_sensors();
   return true;
@@ -205,8 +215,10 @@ size_t SdMmc::file_size(const char *path) {
   struct stat info;
   size_t file_size = 0;
   if (stat(absolut_path.c_str(), &info) < 0) {
+    // FIX: original returned (size_t)-1 which wraps to ~4 GB on 32-bit size_t.
+    // Return 0 so sensors show 0 B for missing files instead of 4294967296 B.
     ESP_LOGE(TAG, "Failed to stat file: %s", strerror(errno));
-    return -1;
+    return 0;
   }
   return info.st_size;
 }
@@ -220,6 +232,22 @@ std::string SdMmc::sd_card_type() const {
     return (this->card_->ocr & SD_OCR_SDHC_CAP) ? "SDHC/SDXC" : "SDSC";
   }
   return "UNKNOWN";
+}
+
+std::string SdMmc::fs_type() const {
+  FATFS *fs = nullptr;
+  DWORD free_clust = 0;
+  if (f_getfree(MOUNT_POINT.c_str(), &free_clust, &fs) != FR_OK || fs == nullptr)
+    return "UNKNOWN";
+  switch (fs->fs_type) {
+    case FS_FAT12: return "FAT12";
+    case FS_FAT16: return "FAT16";
+    case FS_FAT32: return "FAT32";
+#ifdef FS_EXFAT
+    case FS_EXFAT: return "exFAT";
+#endif
+    default: return "UNKNOWN";
+  }
 }
 
 void SdMmc::update_sensors() {
@@ -246,6 +274,9 @@ void SdMmc::update_sensors() {
     this->total_space_sensor_->publish_state(total_bytes);
   if (this->free_space_sensor_ != nullptr)
     this->free_space_sensor_->publish_state(free_bytes);
+
+  if (this->frequency_sensor_ != nullptr)
+    this->frequency_sensor_->publish_state(this->card_->max_freq_khz);
 
   for (auto &sensor : this->file_size_sensors_) {
     if (sensor.sensor != nullptr)
