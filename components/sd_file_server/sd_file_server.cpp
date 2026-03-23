@@ -15,7 +15,7 @@ void SDFileServer::setup() { this->base_->add_handler(this); }
 
 void SDFileServer::dump_config() {
   ESP_LOGCONFIG(TAG, "SD File Server:");
-  ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address().c_str(), this->base_->get_port());
+  ESP_LOGCONFIG(TAG, "  Address: %s:%u", network::get_use_address(), this->base_->get_port());
   ESP_LOGCONFIG(TAG, "  Url Prefix: %s", this->url_prefix_.c_str());
   ESP_LOGCONFIG(TAG, "  Root Path: %s", this->root_path_.c_str());
   ESP_LOGCONFIG(TAG, "  Deletation Enabled: %s", TRUEFALSE(this->deletion_enabled_));
@@ -43,7 +43,7 @@ void SDFileServer::handleRequest(AsyncWebServerRequest *request) {
   }
 }
 
-void SDFileServer::handleUpload(AsyncWebServerRequest *request, const String &filename, size_t index, uint8_t *data,
+void SDFileServer::handleUpload(AsyncWebServerRequest *request, const std::string &filename, size_t index, uint8_t *data,
                                 size_t len, bool final) {
   if (!this->upload_enabled_) {
     request->send(401, "application/json", "{ \"error\": \"file upload is disabled\" }");
@@ -143,12 +143,12 @@ void SDFileServer::write_row(AsyncResponseStream *response, sd_mmc_card::FileInf
 
 void SDFileServer::handle_index(AsyncWebServerRequest *request, std::string const &path) const {
   AsyncResponseStream *response = request->beginResponseStream("text/html");
-  response->print(F(R"(
+  response->print(R"(
   <!DOCTYPE html>
-  <html lang=\"en\">
+  <html lang="en">
   <head>
     <meta charset=UTF-8>
-    <meta name=viewport content=\"width=device-width, initial-scale=1,user-scalable=no\">
+    <meta name=viewport content="width=device-width, initial-scale=1,user-scalable=no">
     <title>SD Card Files</title>
     <style>
     body {
@@ -263,7 +263,7 @@ void SDFileServer::handle_index(AsyncWebServerRequest *request, std::string cons
       <button onclick="window.location.href='/'">Go to web server</button>
     </div>
     <div class="breadcrumb">
-      <a href="/">Home</a>)"));
+      <a href="/">Home</a>)");
 
   std::string current_path = "/";
   std::string relative_path = Path::join(this->url_prefix_, Path::remove_root_path(path, this->root_path_));
@@ -278,24 +278,24 @@ void SDFileServer::handle_index(AsyncWebServerRequest *request, std::string cons
       response->print("</a>");
     }
   }
-  response->print(F("</div>"));
+  response->print("</div>");
 
   if (this->upload_enabled_)
-    response->print(F("<div class=\"upload-form\"><form method=\"POST\" enctype=\"multipart/form-data\">"
-                      "<input type=\"file\" name=\"file\"><input type=\"submit\" value=\"upload\"></form></div>"));
+    response->print("<div class=\"upload-form\"><form method=\"POST\" enctype=\"multipart/form-data\">"
+                      "<input type=\"file\" name=\"file\"><input type=\"submit\" value=\"upload\"></form></div>");
 
-  response->print(F("<table><thead><tr>"
+  response->print("<table><thead><tr>"
                     "<th>Name</th>"
                     "<th>Type</th>"
                     "<th>Size</th>"
                     "<th>Actions</th>"
-                    "</tr></thead><tbody>"));
+                    "</tr></thead><tbody>");
 
   auto entries = this->sd_mmc_card_->list_directory_file_info(path, 0);
   for (auto const &entry : entries)
     write_row(response, entry);
 
-  response->print(F("</tbody></table>"
+  response->print("</tbody></table>"
                     "<script>"
                     "function delete_file(path) {fetch(path, {method: \"DELETE\"});}"
                     "function download_file(path, filename) {"
@@ -308,7 +308,7 @@ void SDFileServer::handle_index(AsyncWebServerRequest *request, std::string cons
                     "}).catch(console.error);"
                     "} "
                     "</script>"
-                    "</body></html>"));
+                    "</body></html>");
 
   request->send(response);
 }
@@ -327,8 +327,8 @@ void SDFileServer::handle_download(AsyncWebServerRequest *request, std::string c
 #ifdef USE_ESP_IDF
   auto *response = request->beginResponse(200, Path::mime_type(path).c_str(), file.data(), file.size());
 #else
-  auto *response = request->beginResponseStream(Path::mime_type(path).c_str(), file.size());
-  response->write(file.data(), file.size());
+  auto *response = request->beginResponseStream(Path::mime_type(path).c_str());
+  response->print(std::string(file.begin(), file.end()).c_str());
 #endif
 
   request->send(response);

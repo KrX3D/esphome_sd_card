@@ -83,6 +83,7 @@ class SdMmc : public Component {
   void set_data2_pin(uint8_t);
   void set_data3_pin(uint8_t);
   void set_mode_1bit(bool);
+  void set_format_if_mount_failed(bool);
   void set_power_ctrl_pin(GPIOPin *);
 
  protected:
@@ -94,6 +95,7 @@ class SdMmc : public Component {
   uint8_t data2_pin_;
   uint8_t data3_pin_;
   bool mode_1bit_;
+  bool format_if_mount_failed_;
   GPIOPin *power_ctrl_pin_{nullptr};
 
 #ifdef USE_ESP_IDF
@@ -119,7 +121,7 @@ template<typename... Ts> class SdMmcWriteFileAction : public Action<Ts...> {
   TEMPLATABLE_VALUE(std::string, path)
   TEMPLATABLE_VALUE(std::vector<uint8_t>, data)
 
-  void play(Ts... x) {
+  void play(const Ts &...x) override {
     auto path = this->path_.value(x...);
     auto buffer = this->data_.value(x...);
     this->parent_->write_file(path.c_str(), buffer.data(), buffer.size());
@@ -135,7 +137,7 @@ template<typename... Ts> class SdMmcAppendFileAction : public Action<Ts...> {
   TEMPLATABLE_VALUE(std::string, path)
   TEMPLATABLE_VALUE(std::vector<uint8_t>, data)
 
-  void play(Ts... x) {
+  void play(const Ts &...x) override {
     auto path = this->path_.value(x...);
     auto buffer = this->data_.value(x...);
     this->parent_->append_file(path.c_str(), buffer.data(), buffer.size());
@@ -150,7 +152,7 @@ template<typename... Ts> class SdMmcCreateDirectoryAction : public Action<Ts...>
   SdMmcCreateDirectoryAction(SdMmc *parent) : parent_(parent) {}
   TEMPLATABLE_VALUE(std::string, path)
 
-  void play(Ts... x) {
+  void play(const Ts &...x) override {
     auto path = this->path_.value(x...);
     this->parent_->create_directory(path.c_str());
   }
@@ -164,7 +166,7 @@ template<typename... Ts> class SdMmcRemoveDirectoryAction : public Action<Ts...>
   SdMmcRemoveDirectoryAction(SdMmc *parent) : parent_(parent) {}
   TEMPLATABLE_VALUE(std::string, path)
 
-  void play(Ts... x) {
+  void play(const Ts &...x) override {
     auto path = this->path_.value(x...);
     this->parent_->remove_directory(path.c_str());
   }
@@ -178,7 +180,7 @@ template<typename... Ts> class SdMmcDeleteFileAction : public Action<Ts...> {
   SdMmcDeleteFileAction(SdMmc *parent) : parent_(parent) {}
   TEMPLATABLE_VALUE(std::string, path)
 
-  void play(Ts... x) {
+  void play(const Ts &...x) override {
     auto path = this->path_.value(x...);
     this->parent_->delete_file(path.c_str());
   }
