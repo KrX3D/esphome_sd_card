@@ -3,15 +3,15 @@
 SD MMC cards components for esphome.
 
 * [Config](#config)
-  + [Notes](#notes)
-    - [Arduino Framework](#arduino-f)
-    - [ESP-IDF Framework](#esp-idf-framework)
-  + [Devices Examples](#devices-examples)
-  + [Actions](#actions)
-  + [Sensors](#sensors)
-  + [Text Sensors](#text-sensors)
-  + [Others](#others)
-  + [Helpers](#helpers)
+  * [Notes](#notes)
+    * [Arduino Framework](#arduino-framework)
+    * [ESP-IDF Framework](#esp-idf-framework)
+  * [Devices Examples](#devices-examples)
+  * [Actions](#actions)
+  * [Sensors](#sensors)
+  * [Text Sensors](#text-sensors)
+  * [Others](#others)
+  * [Helpers](#helpers)
 
 
 # Config
