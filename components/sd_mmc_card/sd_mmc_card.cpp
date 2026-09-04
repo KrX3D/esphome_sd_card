@@ -168,7 +168,10 @@ MemoryUnits memory_unit_from_size(size_t size) {
 std::string format_size(size_t size) {
   MemoryUnits unit = memory_unit_from_size(size);
   char buffer[32];
-  snprintf(buffer, sizeof(buffer), "%.2f %s", convertBytes(size, unit), memory_unit_to_string(unit).c_str());
+  // convertBytes() returns long double; %.2f expects double, which is undefined
+  // behaviour and produced garbage sizes. double has ample precision here.
+  snprintf(buffer, sizeof(buffer), "%.2f %s", static_cast<double>(convertBytes(size, unit)),
+           memory_unit_to_string(unit).c_str());
   return std::string(buffer);
 }
 

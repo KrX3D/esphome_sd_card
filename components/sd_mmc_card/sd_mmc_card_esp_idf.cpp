@@ -153,10 +153,19 @@ std::vector<uint8_t> SdMmc::read_file(char const *path) {
   size_t fileSize = this->file_size(path);
   res.resize(fileSize);
   size_t len = fread(res.data(), 1, fileSize, file);
+  // fread returns size_t, so the previous "len < 0" check was always false and no
+  // read error was ever reported. Ask the stream itself instead.
+  bool io_error = ferror(file) != 0;
   fclose(file);
-  if (len < 0) {
+  if (io_error) {
     ESP_LOGE(TAG, "Failed to read file: %s", strerror(errno));
     return std::vector<uint8_t>();
+  }
+  if (len != fileSize) {
+    // Short read: the buffer was sized from file_size(), so the tail would
+    // otherwise be handed back uninitialised.
+    ESP_LOGW(TAG, "Short read on %s: %zu of %zu bytes", path, len, fileSize);
+    res.resize(len);
   }
 
   return res;
